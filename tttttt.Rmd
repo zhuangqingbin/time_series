@@ -1,0 +1,46 @@
+---
+title: "TS analysis"
+author: "J"
+date: "2016年3月31日"
+output:
+  pdf_document:
+    includes:
+      in_header: header.tex 
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: no
+    toc: no
+  html_document: default
+  word_document: default
+---
+
+#数据导入及预处理
+```{r,warning=FALSE,message=FALSE}
+library(TSA) #打开时间序列分析的R包
+data <- read.csv("shuju.csv") #从shuju中读入R环境，命名为data数据框
+View(data) #查看data
+for(i in 1:5){
+  assign(paste0("var",i),log(ts(data[,i+1],star=1999)))
+}
+#循环赋值，将data数据框中的五个变量的对数转化为ts格式，并进行重命名
+```
+#平稳性分析
+
+用tseries包的adf.test函数做假设检验，$H_0$:序列不平稳。
+```{r,warning=FALSE,message=FALSE}
+library(tseries)
+adf.test(var1)
+adf.test(var2)
+adf.test(var3)
+adf.test(var4)
+adf.test(var5)
+```
+大于显著性水平，不能拒绝原假设。
+```{r,warning=FALSE,message=FALSE}
+adf.test(diff(var1,4))
+adf.test(diff(var2,2))
+adf.test(diff(var3))
+adf.test(diff(var4))
+adf.test(diff(var5))
+```
+

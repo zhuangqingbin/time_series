@@ -1,0 +1,147 @@
+---
+title: "R in action"
+author: "zhuang"
+date: "2016年3月23日"
+output:
+  pdf_document:
+    includes:
+      in_header: header.tex 
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: no
+    toc: yes
+  html_document: default
+  word_document: default
+---
+
+#Chapter 1
+```{r,warning=FALSE,fig.showtext=TRUE,comment="-> ",message=FALSE}
+set.seed(20)
+n <- 100
+p <- 0.5
+u0 <- rbinom(100,1,p)
+u1 <- (u0-0.5)*2
+x <- c(0,cumsum(u1))
+plot(diff(x),type='l',main="",xlab="时间",ylab="差分值",xlim=c(0,100),cex.axis=1.5,cex.lab=1.5)
+library(TSA)
+par(mfrow=c(2,1),cex.axis=1.5,cex.lab=1.5)
+acf(x,main="随机游走模型")
+acf(diff(x),main="一阶差分序列")
+par(mfrow=c(1,1))
+
+#不能拒绝原假设，认为随机游走模型的差分序列不存在自相关性
+Box.test(diff(x),lag=5,type=c("Box-Pierce"))
+Box.test(diff(x),lag=5,type=c("Ljung-Box"))
+
+index <- ts(read.csv("shindex.csv",header = TRUE)[,2],start = c(1995,1),frequency = 12)
+index.dif <- diff(log(index))
+par(mfrow=c(2,1),cex.axis=1.5,cex.lab=1.5)
+#图形显示上证综合指数水平的自相关函数缓慢衰减，滞后20期的自相关系数仍显著异于零，初步判断为非平稳时间序列
+acf(index,main="上证指数")
+#
+acf(index.dif,main="上证指数的对数差分")
+par(mfrow=c(1,1))
+
+Box.test(index.dif,lag=5)
+Box.test(index.dif,lag=5,type=c("Ljung-Box"))
+```
+
+#Chapter 2
+```{r}
+#对于时间序列，可以分解为长期趋势部分/季节变动部分/不规则波动部分
+GDP <- ts(read.csv("gdpq.csv",header = T),start = 1992,frequency = 12)
+gdp.decom <- decompose(GDP,type="multiplicative")
+plot(gdp.decom,tyoe="o",cex.axis=1.5,cex.lab=1.5)
+Trend <- gdp.decom$trend
+Seasonal <- gdp.decom$seasonal
+Random <- gdp.decom$random
+
+#长期趋势部分通过对数据平滑方法进行估计
+hs300 <- read.csv("hs300.csv",header = T)[,2]
+plot(hs300,type="l",cex.axis=1.5,cex.lab=1.5,xlab="沪深300指数和20日移动平均线")
+ma20 <- filter(ts(hs300),filter = rep(1/20,20),sides=1)
+lines(ma20,lwd=2,xlab="d")
+
+##
+#中心化移动平均
+GDP <- ts(read.csv("gdpq.csv",header=T),start=1992,freq=4)
+trendpatternl <- filter(GDP,filter = c(1/8,1/4,1/4,1/4,1/8),sides=2)
+plot(GDP,type="o",cex.axis=1.5,cex.lab=1.5,xlab="时间",ylab="GDP")
+lines(trendpatternl,col="red",lwd=2)
+
+#二次移动平均
+m1 <- filter(GDP,filter = rep(1/4,4),sides=1)
+m2 <- filter(m1,filter = rep(1/4,4),sides=1)
+trendpattern2=2*m1-m2
+plot(GDP,type="o",cex.axis=1.5,cex.lab=1.5,xlab="时间",ylab="GDP")
+lines(trendpattern2,col="red",lwd=2)
+trendpattern2
+
+#指数平滑方法
+consumer_conf <- ts(read.csv("consumer_cf.csv",header = T)[,2],start=c(2010,1),freq=12)
+plot(consumer_conf,type="o",cex.axis=1.5,cex.lab=1.5)
+
+cf.hw1 <- HoltWinters(consumer_conf,beta=F,gamma = F)
+cf.hw1
+
+cf.hw2 <- HoltWinters(consumer_conf,alpha = 0.5,beta=F,gamma=F)
+cf.hw2
+cf.hw1f <- predict(cf.hw1,6,prediction.interval=T)
+plot(cf.hw1,cf.hw1f,type="o",cex.axis=1.5,cex.lab=1.5)
+
+```
+
+#chapter3
+```{r}
+library(TSA)
+library(zoo)
+ex <- read.zoo("exchange.csv",sep=",",header=T,format="%Y-%m-%d")
+exr <- diff(ex)/lag(ex,k=-1)*100
+par(mfrow=c(2,1))
+plot(ex,type="l",xlab="",ylab="",main="人民币汇率走势图")
+plot(exr,type = "l",xlab="",ylab="",main = "人民币汇率的变化率")
+
+par(mfrow=c(2,1),cex.axis=1.5,cex.lab=1.5)
+acf(ts(exr),30,main="",xlab="人民币汇率变化率的自相关函数")
+pacf(ts(exr),30,main="",xlab="人民币汇率变化率的偏自相关函数")
+
+CPI <- ts(read.csv("cpi.csv",header = T)[,2],start=1978)
+CPI.dif <- diff(CPI)
+par(mfrow=c(2,1),cex.lab=1.5,cex.axis=1.5)
+plot(CPI,type="o")
+plot(CPI.dif,type="o")
+par(mfrow=c(2,1),cex.axis=1.5,cex.lab=1.5)
+acf(CPI.dif)
+pacf(CPI.dif)
+par(mfrow=c(1,1))
+
+#ARMA
+set.seed(12)
+armall.sim <- arima.sim(list(order=c(1,0,1),ar=c(-0.6),ma=c(-0.8)),n=200)
+sim.eacf <- eacf(armall.sim,ar.max = 7,ma.max = 7)
+print(sim.eacf$eacf,digits = 2)
+
+gdp <- ts(read.csv("gdp.csv",header = T)[,2],start=1952)
+gdp.r <- diff(log(gdp))
+par(mfrow=c(2,1),cex.lab=1.5,cex.axis=1.5)
+plot(gdp,type="o",xlab="年份",ylab="",main="人均国内生产总值")
+plot(gdp.r,type="o",xlab="年份",ylab="",main="人均国内生产总值的对数差分")
+par(mfrow=c(1,1))
+gdp.eacf <- eacf(gdp.r)
+
+set.seed(12)
+armall.sim <- arima.sim(list(order=c(1,0,1),ar=c(-0.6),ma=c(-0.8)),n=200)
+aic <- auto.arima(armall.sim,max.p=6,max.q=12,ic="aic")
+
+#参数估计
+set.seed(20)
+estimate.ma1.mom <- function(x){
+  r=acf(x,plot=F)$acf
+  if(abs(r)<0.5)return((1-sqrt(1-4*r^2))/(2*r))
+  else return(NA)
+}
+#模拟次数
+M <- 3000
+ma.mom
+```
+

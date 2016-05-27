@@ -1,0 +1,23 @@
+---
+title: "R in action"
+author: "zhuang"
+date: "2016年3月23日"
+output:
+  pdf_document:
+    includes:
+      in_header: header.tex 
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: no
+    toc: yes
+  html_document: default
+  word_document: default
+---
+
+
+```{r,echo=FALSE,warning=FALSE}
+library(pander) 
+panderOptions('table.split.table', Inf) 
+set.caption('Hello Fisher!')  
+pander(head(iris))
+```
